@@ -151,7 +151,7 @@ sha1_get_plugin_name:
     ret
 
 ; =============================================================================
-; void sha1_init(void)
+; int sha1_init(void)
 ;
 ; Initialises the static context with the SHA-1 magic constants.
 ; =============================================================================
@@ -166,6 +166,7 @@ sha1_init:
     mov    qword [rax + CTX_BITCOUNT], 0
     mov    dword [rax + CTX_BUFLEN],   0
     mov    dword [rax + CTX_FINISHED], 0
+    xor    rax, rax
     ret
 
 ; =============================================================================

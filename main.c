@@ -25,7 +25,7 @@
 #define SHA1_HASH_SIZE  20
 
 typedef int (*sha1_get_plugin_name_t)(char *name, int max_length);
-typedef void (*sha1_init_t)(void);
+typedef int (*sha1_init_t)(void);
 typedef void (*sha1_update_t)(const uint8_t *data, uint32_t size);
 typedef int (*sha1_get_t)(uint8_t *sha1_buffer);
 
@@ -36,19 +36,10 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    /* Open in binary mode: text mode on Windows translates \r\n and
-     * would produce wrong SHA-1 digests for binary content.           */
-    FILE *f = fopen(argv[2], "rb");
-    if (!f) {
-        perror("Unable to open input file");
-        return 2;
-    }
-
     void *plugin = plugin_open(argv[1]);
     if (!plugin) {
         fprintf(stderr, "Unable to load plugin: %s\n", argv[1]);
-        fclose(f);
-        return 3;
+        return 2;
     }
 
     sha1_get_plugin_name_t sha1_get_plugin_name = (sha1_get_plugin_name_t) plugin_sym(plugin, "sha1_get_plugin_name");
@@ -59,14 +50,26 @@ int main(int argc, char* argv[])
     if (!sha1_get_plugin_name || !sha1_init || !sha1_update || !sha1_get) {
         fprintf(stderr, "Unable to find all the required symbols in the specified plugin dynamic library\n");
         plugin_close(plugin);
-        fclose(f);
+        return 3;
+    }
+
+    int init_result = sha1_init();
+    if (init_result != 0) {
+        fprintf(stderr, "Error %d in plugin initialisation!\n", init_result);
+        plugin_close(plugin);
         return 4;
+    }
+
+    /* Open in binary mode: text mode on Windows translates \r\n and
+     * would produce wrong SHA-1 digests for binary content.           */
+    FILE *f = fopen(argv[2], "rb");
+    if (!f) {
+        perror("Unable to open input file");
+        return 5;
     }
 
     uint8_t buffer[BLOCK_SIZE];
     size_t read_bytes;
-
-    sha1_init();
 
     while (!feof(f)) {
         read_bytes = fread(buffer, 1, BLOCK_SIZE, f);
@@ -80,7 +83,7 @@ int main(int argc, char* argv[])
         fprintf(stderr, "Error %d in hash computation!\n", result);
         plugin_close(plugin);
         fclose(f);
-        return 5;
+        return 6;
     }
 
     for (int i = 0; i < SHA1_HASH_SIZE; i++)

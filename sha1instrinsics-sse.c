@@ -18,7 +18,7 @@
  *
  * Exposed API:
  *   int  sha1_get_plugin_name(char *name, int max_length);
- *   void sha1_init(void);
+ *   int  sha1_init(void);   // returns 0 if OK, 1 if CPU lacks SHA-NI
  *   void sha1_update(const uint8_t *data, uint32_t size);
  *   int  sha1_get(uint8_t *sha1_buffer);
  */
@@ -26,6 +26,40 @@
 #include <stdint.h>
 #include <string.h>
 #include <immintrin.h>
+
+/* CPUID support for runtime SHA-NI feature detection */
+#if defined(_MSC_VER)
+#  include <intrin.h>
+#elif defined(__GNUC__) || defined(__clang__)
+#  include <cpuid.h>
+#endif
+
+/* ------------------------------------------------------------------ */
+/*  CPU feature detection                                               */
+/* ------------------------------------------------------------------ */
+
+/*
+ * Returns 1 if the CPU supports SHA-NI (CPUID leaf 7, subleaf 0,
+ * EBX bit 29), 0 otherwise.
+ */
+static int cpu_has_sha_ni(void)
+{
+#if defined(_MSC_VER)
+    int info[4];
+    __cpuidex(info, 7, 0);
+    return (info[1] >> 29) & 1;
+#elif defined(__GNUC__) || defined(__clang__)
+    unsigned int eax = 0, ebx = 0, ecx = 0, edx = 0;
+    /* First check that CPUID leaf 7 is available */
+    __cpuid_count(0, 0, eax, ebx, ecx, edx);
+    if (eax < 7)
+        return 0;
+    __cpuid_count(7, 0, eax, ebx, ecx, edx);
+    return (ebx >> 29) & 1;
+#else
+    return 0; /* Unknown compiler: conservatively report unsupported */
+#endif
+}
 
 /* ------------------------------------------------------------------ */
 /*  Compiler portability macros                                         */
@@ -322,8 +356,11 @@ SHA1_EXPORT int sha1_get_plugin_name(char *name, int max_length)
     return 0;
 }
 
-SHA1_EXPORT void sha1_init(void)
+SHA1_EXPORT int sha1_init(void)
 {
+    if (!cpu_has_sha_ni())
+        return 1;
+
     ctx.h[0]      = 0x67452301u;
     ctx.h[1]      = 0xEFCDAB89u;
     ctx.h[2]      = 0x98BADCFEu;
@@ -332,6 +369,8 @@ SHA1_EXPORT void sha1_init(void)
     ctx.bit_count = 0;
     ctx.buf_len   = 0;
     ctx.finished  = 0;
+
+    return 0;
 }
 
 SHA1_EXPORT void sha1_update(const uint8_t *data, uint32_t size)

@@ -134,7 +134,7 @@ SHA1_EXPORT int sha1_get_plugin_name(char *name, int max_length)
     return plugin_name_len;
 }
 
-SHA1_EXPORT void sha1_init(void)
+SHA1_EXPORT int sha1_init(void)
 {
     ctx.h[0]     = 0x67452301u;
     ctx.h[1]     = 0xEFCDAB89u;
@@ -144,6 +144,8 @@ SHA1_EXPORT void sha1_init(void)
     ctx.bit_count = 0;
     ctx.buf_len   = 0;
     ctx.finished  = 0;
+
+    return 0;
 }
 
 SHA1_EXPORT void sha1_update(const uint8_t *data, uint32_t size)
