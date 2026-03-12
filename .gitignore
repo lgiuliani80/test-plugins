@@ -1,0 +1,8 @@
+CMakeFiles
+CMakeCache.txt
+Makefile
+*.cmake
+*.o
+*.so
+my_sha1
+build
