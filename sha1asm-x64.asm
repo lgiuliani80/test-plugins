@@ -1,5 +1,5 @@
 ; =============================================================================
-; SHA-1 plugin – pure x86-64 NASM implementation
+; SHA-1 plugin – pure x64-64 NASM implementation
 ;
 ; Exposes the four plugin functions entirely in assembly:
 ;   int  sha1_get_plugin_name(char *name, int max_length)
@@ -18,12 +18,12 @@
 ;                      external callers); when we call nothing we don't need it.
 ;
 ; Build (Linux):
-;   nasm -f elf64 sha1asm-x86.asm -o sha1asm-x86.o
-;   gcc  -shared -fPIC -o sha1asm-x86.so sha1asm-x86.o
+;   nasm -f elf64 sha1asm-x64.asm -o sha1asm-x64.o
+;   gcc  -shared -fPIC -o sha1asm-x64.so sha1asm-x64.o
 ;
 ; Build (Windows – MSVC link):
-;   nasm -f win64 sha1asm-x86.asm -o sha1asm-x86.obj
-;   link /DLL /OUT:sha1asm-x86.dll sha1asm-x86.obj
+;   nasm -f win64 sha1asm-x64.asm -o sha1asm-x64.obj
+;   link /DLL /OUT:sha1asm-x64.dll sha1asm-x64.obj
 ; =============================================================================
 
 ; ── Calling-convention abstraction ──────────────────────────────────────────
@@ -92,7 +92,7 @@ ctx: resb 104
 
 ; ── Read-only data ───────────────────────────────────────────────────────────
 section .data
-plugin_name_str: db "sha1asm-x86", 0
+plugin_name_str: db "sha1asm-x64", 0
 plugin_name_len  equ $ - plugin_name_str   ; includes NUL → length with NUL
 
 ; ── Text ─────────────────────────────────────────────────────────────────────
@@ -101,7 +101,7 @@ section .text
 ; =============================================================================
 ; int sha1_get_plugin_name(char *name /*ARG1*/, int max_length /*ARG2d*/)
 ;
-; Copies "sha1asm-x86\0" into name, truncating to max_length bytes.
+; Copies "sha1asm-x64\0" into name, truncating to max_length bytes.
 ; Always NUL-terminates.  Returns 0 on success, -1 on bad args.
 ; =============================================================================
 EXPORT sha1_get_plugin_name

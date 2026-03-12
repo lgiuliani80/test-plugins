@@ -314,9 +314,9 @@ SHA1_EXPORT int sha1_get_plugin_name(char *name, int max_length)
     if (!name || max_length <= 0)
         return -1;
 #if defined(_MSC_VER)
-    strncpy_s(name, (size_t)max_length, "sha1intrinsics-x86", _TRUNCATE);
+    strncpy_s(name, (size_t)max_length, "sha1intrinsics-sse", _TRUNCATE);
 #else
-    strncpy(name, "sha1intrinsics-x86", (size_t)max_length - 1);
+    strncpy(name, "sha1intrinsics-sse", (size_t)max_length - 1);
     name[max_length - 1] = '\0';
 #endif
     return 0;

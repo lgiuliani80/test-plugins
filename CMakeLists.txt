@@ -23,8 +23,8 @@ target_link_libraries(my_sha1 PRIVATE ${CMAKE_DL_LIBS})
 add_library(sha1basic SHARED sha1basic.c)
 set_target_properties(sha1basic PROPERTIES PREFIX "")
 
-add_library(sha1intrinsics-x86 SHARED sha1instrinsics-x86.c)
-set_target_properties(sha1intrinsics-x86 PROPERTIES PREFIX "")
+add_library(sha1intrinsics-sse SHARED sha1instrinsics-sse.c)
+set_target_properties(sha1intrinsics-sse PROPERTIES PREFIX "")
 
 # GCC/Clang: sha1_compress already carries __attribute__((target("sha,sse4.1")))
 # so no TU-level ISA flag is required.
@@ -45,24 +45,24 @@ endif()
 
 find_program(NASM_EXECUTABLE nasm REQUIRED)
 
-set(NASM_OBJ ${CMAKE_BINARY_DIR}/sha1asm-x86.o)
+set(NASM_OBJ ${CMAKE_BINARY_DIR}/sha1asm-x64.o)
 add_custom_command(
     OUTPUT  ${NASM_OBJ}
     COMMAND ${NASM_EXECUTABLE} -f ${NASM_FORMAT} -o ${NASM_OBJ}
-            ${CMAKE_CURRENT_SOURCE_DIR}/sha1asm-x86.asm
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/sha1asm-x86.asm
-    COMMENT "Assembling sha1asm-x86.asm (${NASM_FORMAT})"
+            ${CMAKE_CURRENT_SOURCE_DIR}/sha1asm-x64.asm
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/sha1asm-x64.asm
+    COMMENT "Assembling sha1asm-x64.asm (${NASM_FORMAT})"
 )
-add_custom_target(sha1asm-x86-obj DEPENDS ${NASM_OBJ})
+add_custom_target(sha1asm-x64-obj DEPENDS ${NASM_OBJ})
 
-add_library(sha1asm-x86 SHARED ${NASM_OBJ})
-add_dependencies(sha1asm-x86 sha1asm-x86-obj)
-set_target_properties(sha1asm-x86 PROPERTIES
+add_library(sha1asm-x64 SHARED ${NASM_OBJ})
+add_dependencies(sha1asm-x64 sha1asm-x64-obj)
+set_target_properties(sha1asm-x64 PROPERTIES
     PREFIX         ""
     LINKER_LANGUAGE C
 )
 # Remove the default -lstdc++ / -lm that CMake injects for C targets and
 # suppress the executable-stack linker warning generated from NASM output.
 if(UNIX AND NOT APPLE)
-    target_link_options(sha1asm-x86 PRIVATE -Wl,-z,noexecstack)
+    target_link_options(sha1asm-x64 PRIVATE -Wl,-z,noexecstack)
 endif()
