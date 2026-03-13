@@ -1,0 +1,6 @@
+LIBRARY sha1asm-x64
+EXPORTS
+    sha1_get_plugin_name
+    sha1_init
+    sha1_update
+    sha1_get

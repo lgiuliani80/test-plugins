@@ -98,6 +98,13 @@ plugin_name_len  equ $ - plugin_name_str   ; includes NUL → length with NUL
 ; ── Text ─────────────────────────────────────────────────────────────────────
 section .text
 
+%ifidn __OUTPUT_FORMAT__, win64
+EXPORT DllMain
+DllMain:
+    mov rax, 1
+    ret
+%endif
+
 ; =============================================================================
 ; int sha1_get_plugin_name(char *name /*ARG1*/, int max_length /*ARG2d*/)
 ;

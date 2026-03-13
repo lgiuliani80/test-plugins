@@ -6,3 +6,11 @@ Makefile
 *.so
 my_sha1
 build
+Debug
+Release
+x64
+*.vcxproj
+*.sln
+*.filters
+*.user
+.vs
