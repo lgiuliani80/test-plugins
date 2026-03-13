@@ -6,8 +6,8 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 
 # Place every build artifact (executable, shared libraries, DLLs) in the
 # same directory so that my_sha1 can load plugins with a bare relative path.
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})   # .exe / .dll (Windows)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})   # .so         (Linux/macOS)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
 # ── Executable ────────────────────────────────────────────────────────────────
 add_executable(my_sha1 main.c)
@@ -65,4 +65,8 @@ set_target_properties(sha1asm-x64 PROPERTIES
 # suppress the executable-stack linker warning generated from NASM output.
 if(UNIX AND NOT APPLE)
     target_link_options(sha1asm-x64 PRIVATE -Wl,-z,noexecstack)
+endif()
+# Link options for MSVC to suppress the default C runtime and specify the Dll entry point.
+if(MSVC)
+    target_link_options(sha1asm-x64 PRIVATE /NODEFAULTLIB /ENTRY:DllMain /DEF:"sha1asm-x64.def")
 endif()
