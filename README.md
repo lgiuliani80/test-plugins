@@ -13,6 +13,17 @@
 ```bash
 cmake .
 cmake --build . --config Release
+
+# TODO: integrate the .NET and Rust build steps into the CMake build process
+dotnet build dotnet/src/sha1dotnet.csproj -c Release
+cp dotnet/src/bin/Release/net8.0/sha1dotnet.dll ./
+cd dotnet/rust-wrapper
+cargo build --release
+# Linux
+cp target/release/libsha1dotnet_wrapper.so ../sha1dotnet_wrapper.so
+# Windows
+cp target/release/sha1dotnet_wrapper.dll ../sha1dotnet_wrapper.dll
+cd ../..
 ```
 
 ## Running
@@ -42,7 +53,7 @@ $buf = New-Object byte[] (1MB)
 $fs.Close()
 
 # Measure the time taken by each SHA-1 implementation
-"basic","asm-x64","intrinsics-sse" | ForEach-Object { 
+"basic","asm-x64","intrinsics-sse","dotnet_wrapper" | ForEach-Object { 
     "Time taken: {0,6:N3} s" -f (Measure-Command { .\my_sha1 sha1$($_).dll $Env:TEMP\big.bin | Out-Default }).TotalSeconds
 }
 
