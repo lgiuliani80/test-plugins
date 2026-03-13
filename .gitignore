@@ -8,3 +8,11 @@ my_sha1
 build
 bin
 obj
+Debug
+Release
+x64
+*.vcxproj
+*.sln
+*.filters
+*.user
+.vs
