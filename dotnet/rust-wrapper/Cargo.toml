@@ -1,0 +1,11 @@
+[package]
+name = "sha1dotnet-wrapper"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "sha1dotnet_wrapper"
+crate-type = ["cdylib"]
+
+[dependencies]
+libloading = "0.8"

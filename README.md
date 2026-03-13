@@ -24,7 +24,7 @@ Linux:
 dd if=/dev/urandom of=/tmp/big.bin bs=1M count=500
 
 # Measure the time taken by each SHA-1 implementation
-for i in basic asm-x64 intrinsics-sse; do
+for i in basic asm-x64 intrinsics-sse dotnet_wrapper; do
     time ./my_sha1 ./sha1$i.so /tmp/big.bin
 done
 
