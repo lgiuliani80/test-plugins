@@ -6,7 +6,9 @@
 - A C compiler that supports C11 (e.g., GCC, Clang, MSVC)
 - NASM (for assembling the x64 version)
 - A Linux or Windows environment (the code is cross-platform)
-- 
+- `sha1asm-x64` can only be executed on x64 platforms
+- `sha1intrinsics-sse` can only be executed on platforms that support SSE2 (most modern x86 CPUs)
+- `sha1dotnet_wrapper` can only be executed on platforms that support .NET 8.0 (Linux x64, Windows x64, and macOS x64/arm64)
 
 ## Building
 
