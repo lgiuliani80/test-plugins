@@ -6,3 +6,5 @@ Makefile
 *.so
 my_sha1
 build
+bin
+obj
