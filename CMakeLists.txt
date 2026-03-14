@@ -70,3 +70,68 @@ endif()
 if(MSVC)
     target_link_options(sha1asm-x64 PRIVATE /NODEFAULTLIB /ENTRY:DllMain /DEF:"sha1asm-x64.def")
 endif()
+
+# ── .NET + Rust wrapper plugin ────────────────────────────────────────────────
+# Both dotnet and cargo are optional; the plugin is simply skipped when either
+# tool is absent (e.g. in a minimal CI image).
+find_program(DOTNET_EXECUTABLE dotnet)
+find_program(CARGO_EXECUTABLE  cargo)
+
+if(DOTNET_EXECUTABLE AND CARGO_EXECUTABLE)
+    set(DOTNET_PROJ ${CMAKE_CURRENT_SOURCE_DIR}/dotnet/src/sha1dotnet.csproj)
+    set(DOTNET_OUT  ${CMAKE_CURRENT_SOURCE_DIR}/dotnet/src/bin/Release/net8.0)
+
+    set(DOTNET_DLL_DST        ${CMAKE_BINARY_DIR}/sha1dotnet.dll)
+    set(DOTNET_RUNTIMECFG_DST ${CMAKE_BINARY_DIR}/sha1dotnet.runtimeconfig.json)
+
+    # Step 1 – build the .NET class library and copy artefacts into the binary dir.
+    add_custom_command(
+        OUTPUT  ${DOTNET_DLL_DST} ${DOTNET_RUNTIMECFG_DST}
+        COMMAND ${DOTNET_EXECUTABLE} build ${DOTNET_PROJ} -c Release
+        COMMAND ${CMAKE_COMMAND} -E copy
+                ${DOTNET_OUT}/sha1dotnet.dll ${DOTNET_DLL_DST}
+        COMMAND ${CMAKE_COMMAND} -E copy
+                ${DOTNET_OUT}/sha1dotnet.runtimeconfig.json ${DOTNET_RUNTIMECFG_DST}
+        DEPENDS ${DOTNET_PROJ}
+                ${CMAKE_CURRENT_SOURCE_DIR}/dotnet/src/Functions.cs
+        COMMENT "Building .NET plugin (sha1dotnet)"
+        VERBATIM
+    )
+    add_custom_target(sha1dotnet ALL
+        DEPENDS ${DOTNET_DLL_DST} ${DOTNET_RUNTIMECFG_DST}
+    )
+
+    # Step 2 – build the Rust cdylib that hosts the .NET runtime.
+    # On Linux the cargo output is libsha1dotnet_wrapper.so; we copy it without
+    # the "lib" prefix so my_sha1 can load it as sha1dotnet_wrapper.so/.dll.
+    set(RUST_DIR ${CMAKE_CURRENT_SOURCE_DIR}/dotnet/rust-wrapper)
+    if(WIN32)
+        set(RUST_LIB_SRC ${RUST_DIR}/target/release/sha1dotnet_wrapper.dll)
+        set(RUST_LIB_DST ${CMAKE_BINARY_DIR}/sha1dotnet_wrapper.dll)
+    else()
+        set(RUST_LIB_SRC ${RUST_DIR}/target/release/libsha1dotnet_wrapper.so)
+        set(RUST_LIB_DST ${CMAKE_BINARY_DIR}/sha1dotnet_wrapper.so)
+    endif()
+
+    add_custom_command(
+        OUTPUT  ${RUST_LIB_DST}
+        COMMAND ${CARGO_EXECUTABLE} build --release
+        COMMAND ${CMAKE_COMMAND} -E copy ${RUST_LIB_SRC} ${RUST_LIB_DST}
+        WORKING_DIRECTORY ${RUST_DIR}
+        DEPENDS ${DOTNET_DLL_DST}
+                ${RUST_DIR}/Cargo.toml
+                ${RUST_DIR}/src/lib.rs
+        COMMENT "Building Rust wrapper plugin (sha1dotnet_wrapper)"
+        VERBATIM
+    )
+    add_custom_target(sha1dotnet_wrapper ALL
+        DEPENDS ${RUST_LIB_DST}
+    )
+else()
+    if(NOT DOTNET_EXECUTABLE)
+        message(STATUS "dotnet not found – skipping sha1dotnet_wrapper plugin")
+    endif()
+    if(NOT CARGO_EXECUTABLE)
+        message(STATUS "cargo not found – skipping sha1dotnet_wrapper plugin")
+    endif()
+endif()
