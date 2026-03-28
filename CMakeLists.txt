@@ -23,52 +23,59 @@ target_link_libraries(my_sha1 PRIVATE ${CMAKE_DL_LIBS})
 add_library(sha1basic SHARED sha1basic.c)
 set_target_properties(sha1basic PROPERTIES PREFIX "")
 
-add_library(sha1intrinsics-sse SHARED sha1instrinsics-sse.c)
-set_target_properties(sha1intrinsics-sse PROPERTIES PREFIX "")
+# x64-only plugins: SSE intrinsics and NASM assembly require an x86_64 host.
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "AMD64|x86_64")
 
-# GCC/Clang: sha1_compress already carries __attribute__((target("sha,sse4.1")))
-# so no TU-level ISA flag is required.
-# MSVC: the SHA-NI intrinsics in <immintrin.h> are available without a specific
-# /arch: flag; the CPU capability is assumed at runtime.
-# Nothing extra needed here for either compiler.
+    add_library(sha1intrinsics-sse SHARED sha1instrinsics-sse.c)
+    set_target_properties(sha1intrinsics-sse PROPERTIES PREFIX "")
 
-# ── Pure NASM plugin ─────────────────────────────────────────────────────────
-# CMake's ASM_NASM support produces object files but cannot link shared libs
-# directly.  We therefore assemble manually with a custom command and then
-# hand the resulting object to the C linker via an OBJECT library + SHARED lib.
+    # GCC/Clang: sha1_compress already carries __attribute__((target("sha,sse4.1")))
+    # so no TU-level ISA flag is required.
+    # MSVC: the SHA-NI intrinsics in <immintrin.h> are available without a specific
+    # /arch: flag; the CPU capability is assumed at runtime.
+    # Nothing extra needed here for either compiler.
 
-if(WIN32)
-    set(NASM_FORMAT win64)
+    # ── Pure NASM plugin ─────────────────────────────────────────────────────
+    # CMake's ASM_NASM support produces object files but cannot link shared libs
+    # directly.  We therefore assemble manually with a custom command and then
+    # hand the resulting object to the C linker via an OBJECT library + SHARED lib.
+
+    if(WIN32)
+        set(NASM_FORMAT win64)
+    else()
+        set(NASM_FORMAT elf64)
+    endif()
+
+    find_program(NASM_EXECUTABLE nasm REQUIRED)
+
+    set(NASM_OBJ ${CMAKE_BINARY_DIR}/sha1asm-x64.o)
+    add_custom_command(
+        OUTPUT  ${NASM_OBJ}
+        COMMAND ${NASM_EXECUTABLE} -f ${NASM_FORMAT} -o ${NASM_OBJ}
+                ${CMAKE_CURRENT_SOURCE_DIR}/sha1asm-x64.asm
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/sha1asm-x64.asm
+        COMMENT "Assembling sha1asm-x64.asm (${NASM_FORMAT})"
+    )
+    add_custom_target(sha1asm-x64-obj DEPENDS ${NASM_OBJ})
+
+    add_library(sha1asm-x64 SHARED ${NASM_OBJ})
+    add_dependencies(sha1asm-x64 sha1asm-x64-obj)
+    set_target_properties(sha1asm-x64 PROPERTIES
+        PREFIX         ""
+        LINKER_LANGUAGE C
+    )
+    # Remove the default -lstdc++ / -lm that CMake injects for C targets and
+    # suppress the executable-stack linker warning generated from NASM output.
+    if(UNIX AND NOT APPLE)
+        target_link_options(sha1asm-x64 PRIVATE -Wl,-z,noexecstack)
+    endif()
+    # Link options for MSVC to suppress the default C runtime and specify the Dll entry point.
+    if(MSVC)
+        target_link_options(sha1asm-x64 PRIVATE /NODEFAULTLIB /ENTRY:DllMain /DEF:"sha1asm-x64.def")
+    endif()
+
 else()
-    set(NASM_FORMAT elf64)
-endif()
-
-find_program(NASM_EXECUTABLE nasm REQUIRED)
-
-set(NASM_OBJ ${CMAKE_BINARY_DIR}/sha1asm-x64.o)
-add_custom_command(
-    OUTPUT  ${NASM_OBJ}
-    COMMAND ${NASM_EXECUTABLE} -f ${NASM_FORMAT} -o ${NASM_OBJ}
-            ${CMAKE_CURRENT_SOURCE_DIR}/sha1asm-x64.asm
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/sha1asm-x64.asm
-    COMMENT "Assembling sha1asm-x64.asm (${NASM_FORMAT})"
-)
-add_custom_target(sha1asm-x64-obj DEPENDS ${NASM_OBJ})
-
-add_library(sha1asm-x64 SHARED ${NASM_OBJ})
-add_dependencies(sha1asm-x64 sha1asm-x64-obj)
-set_target_properties(sha1asm-x64 PROPERTIES
-    PREFIX         ""
-    LINKER_LANGUAGE C
-)
-# Remove the default -lstdc++ / -lm that CMake injects for C targets and
-# suppress the executable-stack linker warning generated from NASM output.
-if(UNIX AND NOT APPLE)
-    target_link_options(sha1asm-x64 PRIVATE -Wl,-z,noexecstack)
-endif()
-# Link options for MSVC to suppress the default C runtime and specify the Dll entry point.
-if(MSVC)
-    target_link_options(sha1asm-x64 PRIVATE /NODEFAULTLIB /ENTRY:DllMain /DEF:"sha1asm-x64.def")
+    message(STATUS "Non-x64 architecture (${CMAKE_SYSTEM_PROCESSOR}) – skipping sha1intrinsics-sse and sha1asm-x64 plugins")
 endif()
 
 # ── .NET + Rust wrapper plugin ────────────────────────────────────────────────

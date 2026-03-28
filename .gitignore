@@ -6,6 +6,9 @@ Makefile
 *.so
 *.dll
 *.runtimeconfig.json
+*.exe
+*.exp
+*.lib
 my_sha1
 build
 bin
@@ -14,6 +17,7 @@ Debug
 Release
 x64
 *.vcxproj
+*.slnx
 *.sln
 *.filters
 *.user
