@@ -9,6 +9,14 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
+# Multi-config generators (Visual Studio, Ninja Multi-Config) append a
+# per-configuration subdirectory (e.g. Release/) by default.  Override that
+# so all artifacts land in the same directory regardless of generator.
+foreach(_cfg DEBUG RELEASE RELWITHDEBINFO MINSIZEREL)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${_cfg} ${CMAKE_BINARY_DIR})
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${_cfg} ${CMAKE_BINARY_DIR})
+endforeach()
+
 # ── Executable ────────────────────────────────────────────────────────────────
 add_executable(my_sha1 main.c)
 
@@ -81,12 +89,13 @@ endif()
 # ── .NET + Rust wrapper plugin ────────────────────────────────────────────────
 # Both dotnet and cargo are optional; the plugin is simply skipped when either
 # tool is absent (e.g. in a minimal CI image).
+set(DOTNET_VERSION "net8.0")
 find_program(DOTNET_EXECUTABLE dotnet)
 find_program(CARGO_EXECUTABLE  cargo)
 
 if(DOTNET_EXECUTABLE AND CARGO_EXECUTABLE)
     set(DOTNET_PROJ ${CMAKE_CURRENT_SOURCE_DIR}/dotnet/src/sha1dotnet.csproj)
-    set(DOTNET_OUT  ${CMAKE_CURRENT_SOURCE_DIR}/dotnet/src/bin/Release/net8.0)
+    set(DOTNET_OUT  ${CMAKE_CURRENT_SOURCE_DIR}/dotnet/src/bin/Release/${DOTNET_VERSION})
 
     set(DOTNET_DLL_DST        ${CMAKE_BINARY_DIR}/sha1dotnet.dll)
     set(DOTNET_RUNTIMECFG_DST ${CMAKE_BINARY_DIR}/sha1dotnet.runtimeconfig.json)
